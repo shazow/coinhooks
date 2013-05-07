@@ -1,0 +1,2 @@
+class CoinhooksException(Exception):
+    pass
