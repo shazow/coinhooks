@@ -23,8 +23,8 @@ def test_validate_bitcoin_address():
     for addr_str in BITCOIN_ADDRESSES.good:
         assert_true(assert_valid_address(addr_str))
 
-    for addr_str in BITCOIN_ADDRESSES.good:
+    for addr_str in BITCOIN_ADDRESSES.good_testnet:
         assert_true(assert_valid_address(addr_str, network_version=NETWORK_VERSIONS.testnet))
 
-    for addr_str in BITCOIN_ADDRESSES.good:
+    for addr_str in BITCOIN_ADDRESSES.bad:
         assert_raises(ValueError, assert_valid_address, addr_str)
