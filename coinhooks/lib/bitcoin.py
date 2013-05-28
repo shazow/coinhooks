@@ -15,7 +15,7 @@ class NETWORK_VERSIONS:
 def encode_address(b):
     '''Encode a string of bytes into a base58 Bitcoin address.'''
     # Convert to base58
-    n = unstdlib.bytes_to_number(reversed(b))
+    n = unstdlib.bytes_to_number(b)
     s = unstdlib.number_to_string(n, alphabet=ALPHABET_BASE58)
 
     # Replace leading \x00 with equivalent of \x01
@@ -27,7 +27,7 @@ def decode_address(addr_str):
     '''Decode a base58 Bitcoin address into a string of bytes.'''
     # Convert from base58
     n = unstdlib.string_to_number(addr_str, alphabet=ALPHABET_BASE58)
-    b = unstdlib.number_to_bytes(n)[::-1]
+    b = unstdlib.number_to_bytes(n)
 
     # Replace leading \x01 equivalents with \x00
     num_pad = next(i for i, ch in enumerate(addr_str) if ch != ALPHABET_BASE58[0])
@@ -43,7 +43,7 @@ def assert_valid_address(addr_str, network_version=NETWORK_VERSIONS.main):
         raise ValueError('Invalid address format (regexp fail): %s' % addr_str)
 
     addr = decode_address(addr_str)
-    version, body, checksum = addr[0], addr[-4:], addr[:-4]
+    version, body, checksum = addr[0], addr[:-4], addr[-4:]
 
     if address_checksum(body) != checksum:
         raise ValueError('Invalid address format (checksum fail): %s' % addr_str)
