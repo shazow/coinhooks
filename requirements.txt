@@ -1,5 +1,6 @@
 IPython
-Mako==0.8
+Mako==0.8.1
+jsonrpclib
 nose
 pyramid==1.4
 pyramid_beaker
