@@ -48,6 +48,10 @@ def process_queue(bitcoin_rpc, redis, queue_name=REDIS_KEYS.CONFIRMATION_QUEUE, 
         return
 
     t = bitcoin_rpc.gettransaction(tx_id)
+    if t['category'] != 'receive':
+        # Don't care.
+        return
+
     if int(t['confirmations']) < min_confirmations:
         # Not ready yet
         redis.rpush(value)
