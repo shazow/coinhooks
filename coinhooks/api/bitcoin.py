@@ -12,7 +12,7 @@ def _get_bitcoin_rpc(request):
 
 
 def _redis_wallet_key(wallet):
-    return '%s:%s' % (REDIS_KEYS.PREFIX_PENDING_WALLET, wallet)
+    return 
 
 
 def _redis_wallet_value(payout_wallet, callback_url):
@@ -24,8 +24,8 @@ def create_wallet(bitcoin_rpc, redis, payout_wallet, callback_url, account=''):
     new_wallet = bitcoin_rpc.getnewaddress(account)
 
     redis.set(
-        _redis_wallet_key(new_wallet),
-        _redis_wallet_value(payout_wallet, callback_url)
+        '%s:%s' % (REDIS_KEYS.PREFIX_PENDING_WALLET, new_wallet),
+        (payout_wallet, callback_url)
     )
 
 
