@@ -67,5 +67,10 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
     # TODO: Take fee.
     bitcoin_rpc.sendtoaddress(payout_wallet, amount)
 
-    payload = {'transaction': transaction}
+    transaction_str = json.dumps(transaction)
+    transaction_sig = bitcoin_rpc.signmessage(address, transaction_str)
+    payload = {
+        'transaction': transaction_str,
+        'transaction_sig': transaction_sig,
+    }
     requests.post(callback_url, params=payload)
