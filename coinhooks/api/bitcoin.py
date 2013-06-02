@@ -1,4 +1,7 @@
 import jsonrpclib
+import json
+import time
+import requests
 
 
 class REDIS_KEYS:
@@ -25,49 +28,44 @@ def create_wallet(bitcoin_rpc, redis, payout_wallet, callback_url, account=''):
 
     redis.set(
         '%s:%s' % (REDIS_KEYS.PREFIX_PENDING_WALLET, new_wallet),
-        (payout_wallet, callback_url)
+        json.dumps([payout_wallet, callback_url])
     )
 
 
-def _handle_transaction(bitcoin_rpc, redis, t):
-    # TODO: Handle insufficient confirmations (separate queue?)
-    # TODO:
-    # - Fetch redis entry
-    # - Log receipt
-    # - Send payment to payout wallet
-    # bitcoinrpc.sendtoaddress(payout_wallet, amount, key)
-    # - (Someday) Queue webhook
-    # - Send webhook
-    pass
+def queue_transaction(redis, tx_id, queue_name=REDIS_KEYS.CONFIRMATION_QUEUE):
+    value = json.dumps([tx_id, str(int(time.time()))])
+    redis.rpush(queue_name, value)
 
 
-def poll_transactions(bitcoin_rpc, redis, epoch_since=None, account='', num_limit=20, min_confirmations=5):
-    while True:
-        # Keep grabbing more until we find the earliest we haven't seen. We
-        # don't use offset to avoid missing some during the gap.
-        transactions = bitcoin_rpc.listtransactions(account, num_limit)
+def process_queue(bitcoin_rpc, redis, queue_name=REDIS_KEYS.CONFIRMATION_QUEUE, seconds_expire=60*60*24, min_confirmations=5):
+    value = redis.rpop(queue_name)
+    if not value:
+        return
 
-        if not transactions:
-            return
+    tx_id, timestamp = value.split(':')
+    if int(timestamp) + seconds_expire < time.time():
+        # TODO: Log expired transaction.
+        return
 
-        if int(next(transactions)['time']) < epoch_since:
-            break
+    t = bitcoin_rpc.gettransaction(tx_id)
+    if int(t['confirmations']) < min_confirmations:
+        # Not ready yet
+        redis.rpush(value)
+        return
 
-        num_limit *= 2
+    process_transaction(bitcoin_rpc, redis, t)
 
-    # TODO: Fetch and append queued transactions.
 
-    for t in transactions:
-        if int(t['time']) < epoch_since:
-            # Fast forward to the earliest we want
-            continue
+def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
+    address = transaction['address']
+    amount = transaction['amount']
 
-        if t['category'] == 'send':
-            continue
+    value = redis.get('%s:%s' % (REDIS_KEYS.PREFIX_PENDING_WALLET, address))
+    payout_wallet, callback_url = json.loads(value)
 
-        if int(t['confirmations']) < min_confirmations:
-            # TODO: Queue transaction for a later check?
-            redis.sadd(REDIS_KEYS.CONFIRMATION_QUEUE, t['txid'])
-            continue
+    # TODO: Log receipt.
+    # TODO: Take fee.
+    bitcoin_rpc.sendtoaddress(payout_wallet, amount)
 
-        _handle_transaction(bitcoin_rpc, redis, t)
+    payload = {'transaction': transaction}
+    requests.post(callback_url, params=payload)
