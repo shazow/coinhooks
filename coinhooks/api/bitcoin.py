@@ -14,14 +14,6 @@ def _get_bitcoin_rpc(request):
     return jsonrpclib.Server(url)
 
 
-def _redis_wallet_key(wallet):
-    return 
-
-
-def _redis_wallet_value(payout_wallet, callback_url):
-    return payout_wallet, callback_url
-
-
 def create_wallet(bitcoin_rpc, redis, payout_wallet, callback_url, account=''):
     # TODO: Implement wallet re-use
     new_wallet = bitcoin_rpc.getnewaddress(account)
@@ -49,7 +41,7 @@ def process_queue(bitcoin_rpc, redis, queue_name=REDIS_KEYS.CONFIRMATION_QUEUE, 
 
     t = bitcoin_rpc.gettransaction(tx_id)
     if t['category'] != 'receive':
-        # Don't care.
+        # Don't care about sent transactions.
         return
 
     if int(t['confirmations']) < min_confirmations:
@@ -65,6 +57,10 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
     amount = transaction['amount']
 
     value = redis.get('%s:%s' % (REDIS_KEYS.PREFIX_PENDING_WALLET, address))
+    if not value:
+        # Transaction already processed.
+        return
+
     payout_wallet, callback_url = json.loads(value)
 
     # TODO: Log receipt.
