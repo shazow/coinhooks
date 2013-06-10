@@ -1,7 +1,7 @@
 from pyramid import tweens
 from pyramid import httpexceptions
 
-from coinhooks.lib.exceptions import LoginRequired, APIError
+from coinhooks.lib.exceptions import APIError
 from coinhooks.lib import helpers
 
 
@@ -15,14 +15,7 @@ def _setup_models(settings):
     if not settings:
         return
 
-    from sqlalchemy import engine_from_config
-    from coinhooks import model
-
-    engine = engine_from_config(settings, 'sqlalchemy.')
-    model.init(engine)
-
-    # Set password hash maxtime for User object.
-    model.User.PASSWORD_MAXTIME = float(settings.get('password.hash_maxtime', 0.0001))
+    # TODO: Attach Redis and Bitcoin models to the registry.
 
 
 def _template_globals_factory(system):
@@ -33,9 +26,6 @@ def _login_tween(handler, registry):
     def _login_handler(request):
         try:
             return handler(request)
-        except LoginRequired, e:
-            next = request.route_url('account_login', _query={'next': e.next or '/'})
-            raise httpexceptions.HTTPSeeOther(next)
         except APIError, e:
             raise httpexceptions.HTTPBadRequest(detail=e.message)
 
