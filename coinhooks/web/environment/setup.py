@@ -1,28 +1,81 @@
+from urlparse import urlparse
 from pyramid import tweens
 from pyramid import httpexceptions
+
+import jsonrpclib
+import redis
+import sqlalchemy.pool
 
 from coinhooks.lib.exceptions import APIError
 from coinhooks.lib import helpers
 
 
-def _setup_features(RequestCls, settings, prefix='features.'):
-    settings_features = dict((key[len(prefix):], settings[key]) for key in settings if key.startswith(prefix))
-    RequestCls.DEFAULT_FEATURES.update(settings_features)
+## Service connection helpers.
+# TODO: Move this into respective model modules?
+
+def _redis_pool(url):
+    p = urlparse()
+    return redis.ConnectionPool(
+        host=p.hostname,
+        port=p.port,
+        password=p.password,
+        db=int(p.path[1:] or 0),
+    )
+
+def _bitcoin_pool(url, max_overflow=10, pool_size=5):
+    def conn_factory():
+        return jsonrpclib.Server(url)
+
+    # jsonrpclib doesn't come with connectionpooling, so we use SQLAlchemy's generic pool.
+    return sqlalchemy.pool.QueuePool(conn_factory, max_overflow=max_overflow, pool_size=pool_size)
 
 
-def _setup_models(settings):
+def _redis_model(request):
+    # http://redis-py.readthedocs.org/en/latest/#redis.ConnectionPool.release
+    pool = request.registry.redis_pool
+    conn = redis.Redis(connection_pool=pool)
+
+    def cleanup(request):
+        pool.release(conn)
+    request.add_finished_callback(cleanup)
+
+    return conn
+
+
+def _bitcoin_model(request):
+    # http://docs.sqlalchemy.org/en/rel_0_7/core/pooling.html#constructing-a-pool
+    conn = request.registry.bitcoin_pool.connect()
+
+    def cleanup(request):
+        conn.close()
+    request.add_finished_callback(cleanup)
+
+    return conn
+
+##
+
+
+def _setup_models(config):
     """ Attach connection to model modules. """
-    if not settings:
-        return
+    settings = config.get_settings()
 
-    # TODO: Attach Redis and Bitcoin models to the registry.
+    # Attach request.redis property:
+    config.registry.redis_pool = _redis_pool(settings['redis.url'])
+    config.add_request_method(_redis_model, name='redis', reify=True)
+
+    # Attach request.bitcoind property:
+    config.registry.bitcoin_pool = _bitcoin_pool(settings['bitcoind.url'])
+    config.add_request_method(_bitcoin_model, name='bitcoin', reify=True)
+
 
 
 def _template_globals_factory(system):
+    """ Default namespace provided for our templates. """
     return {'h': helpers}
 
 
 def _login_tween(handler, registry):
+    """ Handle our own exceptions a little more intelligently. """
     def _login_handler(request):
         try:
             return handler(request)
@@ -44,8 +97,6 @@ def setup_config(config):
     config.set_request_factory(Request)
     config.add_tween('coinhooks.web.environment.setup._login_tween', over=tweens.MAIN)
 
-    settings = config.get_settings()
-
     # Add Pyramid plugins
     config.include('pyramid_handlers') # Handler-based routes
     config.include('pyramid_mailer') # Email
@@ -55,7 +106,7 @@ def setup_config(config):
 
     # Beaker sessions
     from pyramid_beaker import session_factory_from_settings
-    config.set_session_factory(session_factory_from_settings(settings))
+    config.set_session_factory(session_factory_from_settings(config.get_settings()))
 
     # Routes
     config.add_renderer(".mako", "pyramid.mako_templating.renderer_factory")
@@ -66,10 +117,7 @@ def setup_config(config):
     add_routes(config)
 
     # Module-level model global setup
-    _setup_models(settings)
-
-    # Figure out which features are enabled by default
-    _setup_features(Request, settings)
+    _setup_models(config)
 
     # Need more setup? Do it here.
     # ...
@@ -78,7 +126,7 @@ def setup_config(config):
 
 
 def setup_wsgi(global_config, **settings):
-    """ This function returns a Pyramid WSGI application.  """
+    """ This function returns a Pyramid WSGI application. """
     settings.update(global_config)
     config = setup_config(make_config(settings=settings))
     config.commit()
