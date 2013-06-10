@@ -9,8 +9,9 @@ pyramid_exclog
 pyramid_handlers
 pyramid_mailer==0.10
 pytz
-requests
+requests==1.2.3
+redis
 scrypt==0.5.5
-unstdlib==1.5.2
+unstdlib==1.5.3
 waitress==0.8.2
 webtest

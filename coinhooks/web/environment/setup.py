@@ -1,8 +1,8 @@
 from pyramid import tweens
 from pyramid import httpexceptions
 
-from introhire.lib.exceptions import LoginRequired, APIError
-from introhire.lib import helpers
+from coinhooks.lib.exceptions import LoginRequired, APIError
+from coinhooks.lib import helpers
 
 
 def _setup_features(RequestCls, settings, prefix='features.'):
@@ -16,7 +16,7 @@ def _setup_models(settings):
         return
 
     from sqlalchemy import engine_from_config
-    from introhire import model
+    from coinhooks import model
 
     engine = engine_from_config(settings, 'sqlalchemy.')
     model.init(engine)
@@ -52,7 +52,7 @@ def setup_config(config):
     environment."""
     from .request import Request
     config.set_request_factory(Request)
-    config.add_tween('introhire.web.environment.setup._login_tween', over=tweens.MAIN)
+    config.add_tween('coinhooks.web.environment.setup._login_tween', over=tweens.MAIN)
 
     settings = config.get_settings()
 
@@ -69,7 +69,7 @@ def setup_config(config):
 
     # Routes
     config.add_renderer(".mako", "pyramid.mako_templating.renderer_factory")
-    config.add_static_view("static", "introhire.web:static")
+    config.add_static_view("static", "coinhooks.web:static")
 
     # More routes
     from .routes import add_routes

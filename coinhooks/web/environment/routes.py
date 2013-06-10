@@ -1,4 +1,4 @@
-from introhire.web import views
+from coinhooks.web import views
 from contextlib import contextmanager
 
 
