@@ -16,9 +16,12 @@ def wallet_create(request):
     except ValueError, e:
         raise APIControllerError(e.message)
 
-    # TODO: ...
-    # - Generate a fresh wallet address
-    # - Record w:<wallet> -> (<payout_address>, <callback_url>) in storage.
-    # - Return new wallet object.
+    w = api.wallet.create_wallet(
+        request.bitcoin, request.redis,
+        payout_address=payout_address,
+        callback_url=callback_url,
+    )
 
-    raise NotImplementedError()
+    raise {
+        'wallet_address': w,
+    }

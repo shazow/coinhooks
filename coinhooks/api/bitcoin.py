@@ -3,41 +3,41 @@ import time
 import requests
 
 
+## Helpers
+
 def _get_retry_wait(num_attempt=1, MAX_RETRY_WAIT=86400):
     return min(MAX_RETRY_WAIT, 2**num_attempt)
 
-def _prefixer(prefix):
+def _key_namespace(prefix):
     return lambda s: '%s:%s' % (prefix, s)
 
 
-class REDIS_KEYS:
-    PREFIX_PENDING_WALLET = _prefixer('w')
-    CONFIRMATION_QUEUE = 'confirmation_queue'
-    CALLBACK_QUEUE = 'callback_queue'
-    WALLETS_SET = 'free_wallets'
+KEY_PREFIX_PENDING_WALLET = _key_namespace('w')
+KEY_CONFIRMATION_QUEUE = 'confirmation_queue'
+KEY_CALLBACK_QUEUE = 'callback_queue'
+KEY_WALLETS_SET = 'free_wallets'
 
 
-def _get_bitcoin_rpc(request):
-    url = request.registry.settings['bitcoind.url']
-    return jsonrpclib.Server(url)
+## API
 
-
-def create_wallet(bitcoin_rpc, redis, payout_wallet, callback_url, account=''):
-    new_wallet = redis.spop(WALLETS_SET) or bitcoin_rpc.getnewaddress(account)
+def create_wallet(bitcoin_rpc, redis, payout_address, callback_url, account=''):
+    new_wallet = redis.spop(KEY_WALLETS_SET) or bitcoin_rpc.getnewaddress(account)
 
     # TODO: Add support for min_amount
     redis.set(
-        REDIS_KEYS.PREFIX_PENDING_WALLET(new_wallet),
-        json.dumps([payout_wallet, callback_url])
+        KEY_PREFIX_PENDING_WALLET(new_wallet),
+        json.dumps([payout_address, callback_url])
     )
+
+    return new_wallet
 
 
 def queue_transaction(redis, tx_id):
     value = json.dumps([tx_id, str(int(time.time()))])
-    redis.rpush(REDIS_KEYS.CONFIRMATION_QUEUE, value)
+    redis.rpush(KEY_CONFIRMATION_QUEUE, value)
 
 
-def deque_transaction(bitcoin_rpc, redis, queue_name=REDIS_KEYS.CONFIRMATION_QUEUE, seconds_expire=60*60*24, min_confirmations=5):
+def deque_transaction(bitcoin_rpc, redis, queue_name=KEY_CONFIRMATION_QUEUE, seconds_expire=60*60*24, min_confirmations=5):
     value = redis.rpop(queue_name)
     if not value:
         return
@@ -64,26 +64,27 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
     address = transaction['address']
     amount = transaction['amount']
 
-    key = REDIS_KEYS.PREFIX_PENDING_WALLET(address)
+    key = KEY_PREFIX_PENDING_WALLET(address)
     value = redis.get(key)
     if not value:
         # Transaction already processed.
         return
 
-    payout_wallet, callback_url = json.loads(value)
+    payout_address, callback_url = json.loads(value)
 
     # TODO: Log receipt.
     # TODO: Take fee.
-    bitcoin_rpc.sendtoaddress(payout_wallet, amount)
+    bitcoin_rpc.sendtoaddress(payout_address, amount)
 
     transaction_str = json.dumps(transaction)
     payload = {
+        # TODO: Add nonce and signing?
         'transaction': transaction_str,
     }
 
     process_callback(redis, callback_url, payload)
-    redis.del(key)
-    redis.sadd(REDIS_KEYS.WALLETS_SET, payout_wallet)
+    redis.delete(key)
+    redis.sadd(KEY_WALLETS_SET, payout_address)
 
 
 def queue_callback(redis, callback_url, payload, num_attempts=0):
@@ -93,10 +94,10 @@ def queue_callback(redis, callback_url, payload, num_attempts=0):
         'callback_url': callback_url,
         'payload': payload,
     })
-    redis.rpush(REDIS_KEYS.CALLBACK_QUEUE, retry_value)
+    redis.rpush(KEY_CALLBACK_QUEUE, retry_value)
 
 
-def deque_callback(redis, queue_name=REDIS_KEYS.CALLBACK_QUEUE):
+def deque_callback(redis, queue_name=KEY_CALLBACK_QUEUE):
     value = redis.rpop(queue_name)
     if not value:
         return
@@ -121,4 +122,4 @@ def process_callback(redis, callback_url, payload, num_attempts=0):
         pass
 
     # Failed, queue to retry later
-    queue_callback(redis, callback_url, payload, num_attempts + 1)
+    queue_callback(redis, callback_url, payload, num_attempts+1)

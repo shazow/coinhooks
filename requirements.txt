@@ -1,6 +1,7 @@
 IPython
 Mako==0.8.1
 jsonrpclib
+mock
 nose
 pyramid==1.4
 pyramid_beaker
@@ -9,8 +10,9 @@ pyramid_exclog
 pyramid_handlers
 pyramid_mailer==0.10
 pytz
-requests==1.2.3
 redis
+# TODO: Add hiredis?
+requests==1.2.3
 scrypt==0.5.5
 sqlalchemy==0.8.1
 unstdlib==1.5.3
