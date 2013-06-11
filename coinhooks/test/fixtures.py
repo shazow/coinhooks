@@ -5,6 +5,7 @@ Collection of data and helpers useful for testing.
 class BITCOIN_ADDRESSES:
     good = [
         '15VjRaDX9zpbA8LVnbrCAFzrVzN7ixHNsC',
+        '1EtqqRFwLYwk3ERbtkVKhsAPGgmSB2sh9E',
     ]
 
     bad = [
@@ -15,6 +16,7 @@ class BITCOIN_ADDRESSES:
 
     good_testnet = [
         'n3swQ1Gm1HrNuzA8B4KJtzxqwXt1zEhhNJ',
+        'mqoyKYSsA4RpoMjunFmqJ1WgXEm6xmvCw3',
     ]
 
     encoding = [

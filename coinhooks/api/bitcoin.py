@@ -12,6 +12,7 @@ def _key_namespace(prefix):
     return lambda s: '%s:%s' % (prefix, s)
 
 
+# TODO: Port this to something like https://gist.github.com/shazow/5754021
 KEY_PREFIX_PENDING_WALLET = _key_namespace('w')
 KEY_CONFIRMATION_QUEUE = 'confirmation_queue'
 KEY_CALLBACK_QUEUE = 'callback_queue'
@@ -36,10 +37,13 @@ def queue_transaction(redis, tx_id):
     value = json.dumps([tx_id, str(int(time.time()))])
     redis.rpush(KEY_CONFIRMATION_QUEUE, value)
 
+    return value
 
-def deque_transaction(bitcoin_rpc, redis, queue_name=KEY_CONFIRMATION_QUEUE, seconds_expire=60*60*24, min_confirmations=5):
-    value = redis.rpop(queue_name)
+
+def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmations=5):
+    value = redis.rpop(KEY_CONFIRMATION_QUEUE)
     if not value:
+        # Nothing to do.
         return
 
     tx_id, timestamp = value.split(':')
@@ -54,7 +58,7 @@ def deque_transaction(bitcoin_rpc, redis, queue_name=KEY_CONFIRMATION_QUEUE, sec
 
     if int(t['confirmations']) < min_confirmations:
         # Not ready yet
-        redis.rpush(queue_name, value)
+        redis.rpush(KEY_CONFIRMATION_QUEUE, value)
         return
 
     process_transaction(bitcoin_rpc, redis, t)
@@ -96,9 +100,11 @@ def queue_callback(redis, callback_url, payload, num_attempts=0):
     })
     redis.rpush(KEY_CALLBACK_QUEUE, retry_value)
 
+    return retry_value
 
-def deque_callback(redis, queue_name=KEY_CALLBACK_QUEUE):
-    value = redis.rpop(queue_name)
+
+def deque_callback(redis):
+    value = redis.rpop(KEY_CALLBACK_QUEUE)
     if not value:
         return
 
@@ -116,7 +122,7 @@ def process_callback(redis, callback_url, payload, num_attempts=0):
     try:
         r = requests.post(callback_url, params=payload)
         r.raise_for_status()
-        return # Success
+        return r # Success
     except requests.RequestException, e:
         # TODO: Log error
         pass
