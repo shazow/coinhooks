@@ -14,7 +14,7 @@ from coinhooks.lib import helpers
 # TODO: Move this into respective model modules?
 
 def _redis_pool(url):
-    p = urlparse()
+    p = urlparse(url)
     return redis.ConnectionPool(
         host=p.hostname,
         port=p.port,
@@ -60,13 +60,15 @@ def _setup_models(config):
     settings = config.get_settings()
 
     # Attach request.redis property:
-    config.registry.redis_pool = _redis_pool(settings['redis.url'])
+    redis_url = settings['redis.url']
+    config.registry.redis_pool = _redis_pool(redis_url)
     config.add_request_method(_redis_model, name='redis', reify=True)
 
     # Attach request.bitcoind property:
-    config.registry.bitcoin_pool = _bitcoin_pool(settings['bitcoind.url'])
-    config.add_request_method(_bitcoin_model, name='bitcoin', reify=True)
-
+    bitcoind_url = settings['bitcoind.url']
+    if bitcoind_url:
+        config.registry.bitcoin_pool = _bitcoin_pool(bitcoind_url)
+        config.add_request_method(_bitcoin_model, name='bitcoin', reify=True)
 
 
 def _template_globals_factory(system):

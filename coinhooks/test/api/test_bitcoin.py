@@ -2,6 +2,7 @@ from nose.tools import assert_true, assert_equal, assert_raises
 from mock import Mock
 
 from coinhooks import api
+from coinhooks.test import TestWeb
 from coinhooks.test.fixtures import BITCOIN_ADDRESSES
 
 
@@ -28,14 +29,15 @@ class FakeRedis(Mock):
     pass
 
 
-def test_create_wallet():
-    expected_address = BITCOIN_ADDRESSES.good[0]
+class TestBitcoin(TestWeb):
+    def test_create_wallet(self):
+        expected_address = BITCOIN_ADDRESSES.good[0]
 
-    w = api.bitcoin.create_wallet(
-        FakeBitcoinRPC(),
-        Mock(**{'spop.return_value': None}),
-        payout_address=BITCOIN_ADDRESSES.good[1],
-        callback_url=u'http://localhost/webhook',
-    )
+        w = api.bitcoin.create_wallet(
+            FakeBitcoinRPC(),
+            self.request.registry.redis,
+            payout_address=BITCOIN_ADDRESSES.good[1],
+            callback_url=u'http://localhost/webhook',
+        )
 
-    assert_equal(w, expected_address)
+        assert_equal(w, expected_address)

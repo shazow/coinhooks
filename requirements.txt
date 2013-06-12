@@ -3,7 +3,7 @@ Mako==0.8.1
 jsonrpclib
 mock
 nose
-pyramid==1.4
+pyramid==1.4.2
 pyramid_beaker
 pyramid_debugtoolbar
 pyramid_exclog
