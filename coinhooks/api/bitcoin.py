@@ -21,16 +21,33 @@ KEY_WALLETS_SET = 'free_wallets'
 
 ## API
 
-def create_wallet(bitcoin_rpc, redis, payout_address, callback_url, account=''):
+def create_wallet(bitcoin_rpc, redis, payout_address=None, callback_url=None, account=''):
+    """
+    :param payout_address:
+        If supplied, then payments to the new wallet are automatically relayed
+        to the given payout_address.
+
+    :param callback_url:
+        If supplied, then a webhook is executed onto callback_url for each
+        transaction.
+    """
     new_wallet = redis.spop(KEY_WALLETS_SET) or bitcoin_rpc.getnewaddress(account)
 
-    # TODO: Add support for min_amount
+    # TODO: Add support for min_amount?
     redis.set(
         KEY_PREFIX_PENDING_WALLET(new_wallet),
         json.dumps([payout_address, callback_url])
     )
 
     return new_wallet
+
+
+def discard_wallet(redis, address):
+    # TODO: Check if wallet belongs to bitcoin_rpc?
+    key = KEY_PREFIX_PENDING_WALLET(address)
+
+    redis.delete(key)
+    redis.sadd(KEY_WALLETS_SET, address)
 
 
 def queue_transaction(redis, tx_id):
@@ -46,7 +63,7 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         # Nothing to do.
         return
 
-    tx_id, timestamp = value.split(':')
+    tx_id, timestamp = json.loads(value)
     if int(timestamp) + seconds_expire < time.time():
         # TODO: Log expired transaction.
         return
@@ -61,7 +78,7 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         redis.rpush(KEY_CONFIRMATION_QUEUE, value)
         return
 
-    process_transaction(bitcoin_rpc, redis, t)
+    return process_transaction(bitcoin_rpc, redis, t)
 
 
 def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
@@ -71,24 +88,26 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
     key = KEY_PREFIX_PENDING_WALLET(address)
     value = redis.get(key)
     if not value:
-        # Transaction already processed.
+        # Wallet is discarded.
         return
 
     payout_address, callback_url = json.loads(value)
 
-    # TODO: Log receipt.
-    # TODO: Take fee.
-    bitcoin_rpc.sendtoaddress(payout_address, amount)
+    if payout_address:
+        # TODO: Log receipt.
+        # TODO: Take fee.
+        bitcoin_rpc.sendtoaddress(payout_address, amount)
 
-    transaction_str = json.dumps(transaction)
-    payload = {
-        # TODO: Add nonce and signing?
-        'transaction': transaction_str,
-    }
+    if callback_url:
+        transaction_str = json.dumps(transaction)
+        payload = {
+            # TODO: Add nonce and signing?
+            'transaction': transaction_str,
+        }
 
-    process_callback(redis, callback_url, payload)
-    redis.delete(key)
-    redis.sadd(KEY_WALLETS_SET, payout_address)
+        process_callback(redis, callback_url, payload)
+
+    return transaction
 
 
 def queue_callback(redis, callback_url, payload, num_attempts=0):
@@ -115,7 +134,7 @@ def deque_callback(redis):
         redis.lpush(value)
         return
 
-    process_callback(r['callback_url'], r['payload'], r['num_attempts'])
+    return process_callback(r['callback_url'], r['payload'], r['num_attempts'])
 
 
 def process_callback(redis, callback_url, payload, num_attempts=0):
