@@ -36,7 +36,7 @@ class TestWeb(TestApp):
         from webtest import TestApp
         self.app = TestApp(self.wsgi_app)
         self.csrf_token = settings['session.constant_csrf_token']
-        self.request = web.environment.Request.blank('/')
+        self.request = self.app.RequestClass.blank('/', {})
 
         # Redis cleanup
         self.request.redis.flushdb()

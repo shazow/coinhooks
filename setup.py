@@ -29,7 +29,7 @@ setup(name='coinhooks',
       install_requires = REQUIREMENTS,
       entry_points = """\
       [paste.app_factory]
-      main = coinhooks.web.environment:setup
+      main = coinhooks.web.environment:setup_wsgi
       """,
       paster_plugins=['pyramid'],
       )
