@@ -1,6 +1,7 @@
 import json
 import os
 import paste.deploy
+import redis
 
 from unittest import TestCase
 
@@ -23,10 +24,13 @@ class TestApp(TestCase):
 
         self.config = web.environment.setup_testing(**settings)
         self.wsgi_app = self.config.make_wsgi_app()
+        self.redis = redis.Redis(connection_pool=self.config.registry.redis_pool)
 
     def tearDown(self):
-        super(TestCase, self).tearDown()
+        self.redis.flushdb()
         #testing.tearDown()
+
+        super(TestApp, self).tearDown()
 
 
 class TestWeb(TestApp):
@@ -36,10 +40,7 @@ class TestWeb(TestApp):
         from webtest import TestApp
         self.app = TestApp(self.wsgi_app)
         self.csrf_token = settings['session.constant_csrf_token']
-        self.request = self.app.RequestClass.blank('/', {})
-
-        # Redis cleanup
-        self.request.redis.flushdb()
+        self.request = self.app.RequestClass.blank('/')
 
     def call_api(self, method, format='json', csrf_token=_DEFAULT, _status=None, _extra_params=None, **params):
         "Helpers for calling our @exposed_api(...) methods."

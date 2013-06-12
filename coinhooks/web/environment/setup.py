@@ -31,13 +31,9 @@ def _bitcoin_pool(url, max_overflow=10, pool_size=5):
 
 
 def _redis_model(request):
-    # http://redis-py.readthedocs.org/en/latest/#redis.ConnectionPool.release
+    # http://redis-py.readthedocs.org/en/latest/#redis.ConnectionPool
     pool = request.registry.redis_pool
     conn = redis.Redis(connection_pool=pool)
-
-    def cleanup(request):
-        pool.release(conn)
-    request.add_finished_callback(cleanup)
 
     return conn
 

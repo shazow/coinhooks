@@ -35,7 +35,7 @@ class TestBitcoin(TestWeb):
 
         w = api.bitcoin.create_wallet(
             FakeBitcoinRPC(),
-            self.request.registry.redis,
+            self.redis,
             payout_address=BITCOIN_ADDRESSES.good[1],
             callback_url=u'http://localhost/webhook',
         )
