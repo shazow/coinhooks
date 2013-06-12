@@ -1,6 +1,6 @@
 import time
 
-from nose.tools import assert_true, assert_equal, assert_raises
+from nose.tools import assert_equal
 from mock import Mock
 
 from coinhooks import api
