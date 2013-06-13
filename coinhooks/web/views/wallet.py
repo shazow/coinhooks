@@ -7,7 +7,7 @@ from coinhooks.lib.bitcoin import assert_valid_address
 from .api import expose_api
 
 
-@expose_api('wallet.create')
+@expose_api('wallet.create', check_csrf=False)
 def wallet_create(request):
     callback_url, payout_address = get_many(request, ['callback_url', 'payout_address'])
 
@@ -26,7 +26,7 @@ def wallet_create(request):
 # Following are temporary in this branch, will ultimately live in a pluggable module.
 
 
-@expose_api('wallet.deposit')
+@expose_api('wallet.deposit', check_csrf=False)
 def wallet_deposit(request):
     callback_url, = get_many(request, ['callback_url'])
 
@@ -37,7 +37,7 @@ def wallet_deposit(request):
     }
 
 
-@expose_api('wallet.withdraw')
+@expose_api('wallet.withdraw', check_csrf=False)
 def wallet_withdraw(request):
     payout_address, amount, secret = get_many(request, ['payout_address', 'amount', 'secret'])
 
