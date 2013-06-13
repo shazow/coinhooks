@@ -28,7 +28,6 @@ def wallet_create(request):
 
 @expose_api('wallet.deposit', check_csrf=False)
 def wallet_deposit(request):
-    assert False
     callback_url, = get_many(request.params, ['callback_url'])
 
     if '://' not in callback_url:
