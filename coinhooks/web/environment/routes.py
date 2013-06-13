@@ -12,6 +12,6 @@ def handler_routes(config, handler):
 
 def add_routes(config):
     #config.add_route('index', '/', views.index.index)
-    #config.add_route('api', '/api', views.api.index)
+    config.add_route('api', '/api', views.api.index)
 
     return config
