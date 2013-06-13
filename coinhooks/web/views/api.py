@@ -5,7 +5,6 @@ from functools import wraps
 
 from coinhooks.web.environment import httpexceptions, Response
 from coinhooks.lib.exceptions import APIControllerError, LoginRequired
-from coinhooks.model.meta import SchemaEncoder
 
 
 API_METHOD_MAP = {}
@@ -128,7 +127,7 @@ def index(request):
     if format not in ('json', 'redirect'):
         return httpexceptions.HTTPBadRequest('Invalid format requested: %s' % format)
 
-    encode_settings = {'cls': SchemaEncoder}
+    encode_settings = {} # {'cls': SchemaEncoder}
     if request.params.get('pretty'):
         encode_settings['sort_keys'] = True
         encode_settings['indent'] = 4
