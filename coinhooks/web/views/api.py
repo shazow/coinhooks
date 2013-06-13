@@ -127,7 +127,7 @@ def index(request):
     if format not in ('json', 'redirect'):
         return httpexceptions.HTTPBadRequest('Invalid format requested: %s' % format)
 
-    encode_settings = {} # {'cls': SchemaEncoder}
+    encode_settings = {} # FIXME: {'cls': SchemaEncoder}
     if request.params.get('pretty'):
         encode_settings['sort_keys'] = True
         encode_settings['indent'] = 4
@@ -148,7 +148,7 @@ def index(request):
             query = {'next': e.next or next}
             next = request.route_url('account_login', _query=query)
 
-    data['messages'] += request.pop_flash()
+    # FIXME: data['messages'] += request.pop_flash()
 
     if format == 'redirect':
         for message in data['messages']:
