@@ -16,7 +16,7 @@ def wallet_create(request):
     except ValueError, e:
         raise APIControllerError(e.message)
 
-    w = api.wallet.create_wallet(request.bitcoin, request.redis, payout_address=payout_address, callback_url=callback_url)
+    w = api.bitcoin.create_wallet(request.bitcoin, request.redis, payout_address=payout_address, callback_url=callback_url)
 
     raise {
         'wallet_address': w,
@@ -33,7 +33,7 @@ def wallet_deposit(request):
     if '://' not in callback_url:
         raise APIControllerError('callback_url must include scheme: %s' % callback_url)
 
-    w = api.wallet.create_wallet(request.bitcoin, request.redis, callback_url=callback_url)
+    w = api.bitcoin.create_wallet(request.bitcoin, request.redis, callback_url=callback_url)
 
     raise {
         'wallet_address': w,
