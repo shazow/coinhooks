@@ -21,3 +21,9 @@ class APIError(APIException):
 class APIControllerError(APIError):
     pass
 
+
+class LoginRequired(APIException):
+    def __init__(self, message=None, next=None):
+        APIException.__init__(self, message or 'Login required.', code=403)
+
+        self.next = next
