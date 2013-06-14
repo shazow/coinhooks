@@ -26,9 +26,10 @@ def _bitcoin_pool(url, max_overflow=10, pool_size=4):
     p = urlparse(url)
     def conn_factory():
         return bitcoinrpc.connect_to_remote(
+            user=p.user,
+            password=p.password,
             host=p.hostname,
             port=p.port,
-            password=p.password,
             use_https=p.scheme == 'https',
         )
 
