@@ -23,6 +23,14 @@ KEY_WALLETS_SET = 'free_wallets'
 
 def create_wallet(bitcoin_rpc, redis, payout_address=None, callback_url=None, account=''):
     """
+    Return a fresh wallet address.
+
+    :param bitcoin_rpc:
+        Instance of the Bitcoin JSONRPC client connection.
+
+    :param redis:
+        Instance of the Redis client connection.
+
     :param payout_address:
         If supplied, then payments to the new wallet are automatically relayed
         to the given payout_address.
@@ -43,6 +51,16 @@ def create_wallet(bitcoin_rpc, redis, payout_address=None, callback_url=None, ac
 
 
 def discard_wallet(redis, address):
+    """
+    Mark wallet address as discarded, so it can be re-used (ie. returned in a
+    future call to `create_wallet(...)`).
+
+    :param redis:
+        Instance of the Redis client connection.
+
+    :param address:
+        Wallet address to return to our pool of unused addresses.
+    """
     # TODO: Check if wallet belongs to bitcoin_rpc?
     key = KEY_PREFIX_PENDING_WALLET(address)
 
@@ -51,6 +69,16 @@ def discard_wallet(redis, address):
 
 
 def queue_transaction(redis, tx_id):
+    """
+    Transaction notification received for an address that belongs to us. Used
+    by Bitcoind's `walletnotify=` hook through `bin/walletnotify.py`.
+
+    :param redis:
+        Instance of the Redis client connection.
+
+    :param tx_id:
+        Relevant transaction ID that we just learned about.
+    """
     value = json.dumps([tx_id, str(int(time.time()))])
     redis.rpush(KEY_CONFIRMATION_QUEUE, value)
 
@@ -102,6 +130,7 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
         transaction_str = json.dumps(transaction)
         payload = {
             # TODO: Add nonce and signing?
+            'state': 'confirmed',
             'transaction': transaction_str,
         }
 
@@ -138,6 +167,9 @@ def deque_callback(redis):
 
 
 def process_callback(redis, callback_url, payload, num_attempts=0):
+    """
+    Send webhook callback. If failed, then queue for retry later.
+    """
     try:
         r = requests.post(callback_url, params=payload)
         r.raise_for_status()
