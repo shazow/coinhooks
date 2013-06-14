@@ -8,7 +8,7 @@ def main(request, tx_id):
     api.bitcoin.queue_transaction(request.redis, tx_id)
 
     # TODO: Put this in a looping daemon?
-    api.bitcoin.deque_transaction(request.bitcoin_rpc, request.redis)
+    api.bitcoin.deque_transaction(request.bitcoin, request.redis)
 
 
 if __name__ == '__main__':
