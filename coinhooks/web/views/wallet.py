@@ -18,7 +18,7 @@ def wallet_create(request):
 
     w = api.bitcoin.create_wallet(request.bitcoin, request.redis, payout_address=payout_address, callback_url=callback_url)
 
-    raise {
+    return {
         'wallet_address': w,
     }
 
@@ -35,7 +35,7 @@ def wallet_deposit(request):
 
     w = api.bitcoin.create_wallet(request.bitcoin, request.redis, callback_url=callback_url)
 
-    raise {
+    return {
         'wallet_address': w,
     }
 
