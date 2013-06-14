@@ -2,7 +2,7 @@ from urlparse import urlparse
 from pyramid import tweens
 from pyramid import httpexceptions
 
-import jsonrpclib
+import bitcoinrpc
 import redis
 import sqlalchemy.pool
 
@@ -22,9 +22,15 @@ def _redis_pool(url):
         db=int(p.path[1:] or 0),
     )
 
-def _bitcoin_pool(url, max_overflow=10, pool_size=5):
+def _bitcoin_pool(url, max_overflow=10, pool_size=4):
+    p = urlparse(url)
     def conn_factory():
-        return jsonrpclib.Server(url)
+        return bitcoinrpc.connect_to_remote(
+            host=p.hostname,
+            port=p.port,
+            password=p.password,
+            use_https=p.scheme == 'https',
+        )
 
     # jsonrpclib doesn't come with connectionpooling, so we use SQLAlchemy's generic pool.
     return sqlalchemy.pool.QueuePool(conn_factory, max_overflow=max_overflow, pool_size=pool_size)

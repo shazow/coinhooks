@@ -1,6 +1,6 @@
 import time
 
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_true
 from mock import Mock
 
 from coinhooks import api
@@ -69,5 +69,6 @@ class TestBitcoin(TestWeb):
         api.bitcoin.queue_transaction(self.redis, txid)
         t = api.bitcoin.deque_transaction(fake_bitcoin, self.redis)
 
+        assert_true(t)
         assert_equal(t['txid'], txid)
         assert_equal(t['address'], w)

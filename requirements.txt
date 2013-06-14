@@ -1,6 +1,6 @@
 IPython
 Mako==0.8.1
-jsonrpclib
+bitcoin-python==0.3
 mock
 nose
 pyramid==1.4.2
