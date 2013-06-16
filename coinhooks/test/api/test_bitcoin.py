@@ -1,7 +1,6 @@
 import time
 
 from nose.tools import assert_equal, assert_true
-from mock import Mock
 
 from coinhooks import api
 from coinhooks.test import TestWeb
@@ -38,10 +37,6 @@ class FakeBitcoinRPC(object):
         return r
 
 
-class FakeRedis(Mock):
-    pass
-
-
 class TestBitcoin(TestWeb):
     def test_create_wallet(self):
         expected_address = BITCOIN_ADDRESSES.good[0]
@@ -64,7 +59,7 @@ class TestBitcoin(TestWeb):
         )
 
         txid = u'foo'
-        fake_bitcoin._inject_transaction(amount=0.5, txid=txid, address=w)
+        fake_bitcoin._inject_transaction(amount=0.5, txid=txid, address=w, confirmations=5)
 
         api.bitcoin.queue_transaction(self.redis, txid)
         t = api.bitcoin.deque_transaction(fake_bitcoin, self.redis)

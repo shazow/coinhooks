@@ -97,7 +97,7 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         return
 
     t = bitcoin_rpc.gettransaction(tx_id)
-    if t['category'] != 'receive':
+    if t['category'] != u'receive':
         # Don't care about sent transactions.
         return
 
