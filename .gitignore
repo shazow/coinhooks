@@ -2,7 +2,6 @@
 *.py[cod]
 *.egg-info
 *.db
-production*.ini
 /data
 /build
 /*.log
