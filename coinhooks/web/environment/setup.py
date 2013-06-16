@@ -1,3 +1,5 @@
+import os.path
+
 from urlparse import urlparse
 from pyramid import tweens
 from pyramid import httpexceptions
@@ -63,15 +65,14 @@ def _setup_models(config):
     settings = config.get_settings()
 
     # Attach request.redis property:
-    redis_url = settings['redis.url']
+    redis_url = os.path.expandvars(settings['redis.url'])
     config.registry.redis_pool = _redis_pool(redis_url)
     config.add_request_method(_redis_model, name='redis', reify=True)
 
     # Attach request.bitcoind property:
-    bitcoind_url = settings['bitcoind.url']
-    if bitcoind_url:
-        config.registry.bitcoin_pool = _bitcoin_pool(bitcoind_url)
-        config.add_request_method(_bitcoin_model, name='bitcoin', reify=True)
+    bitcoind_url = os.path.expandvars(settings['bitcoind.url'])
+    config.registry.bitcoin_pool = _bitcoin_pool(bitcoind_url)
+    config.add_request_method(_bitcoin_model, name='bitcoin', reify=True)
 
 
 def _template_globals_factory(system):
