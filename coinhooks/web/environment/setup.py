@@ -65,12 +65,12 @@ def _setup_models(config):
     settings = config.get_settings()
 
     # Attach request.redis property:
-    redis_url = os.path.expandvars(settings['redis.url'])
+    redis_url = settings['redis.url']
     config.registry.redis_pool = _redis_pool(redis_url)
     config.add_request_method(_redis_model, name='redis', reify=True)
 
     # Attach request.bitcoind property:
-    bitcoind_url = os.path.expandvars(settings['bitcoind.url'])
+    bitcoind_url = settings['bitcoind.url']
     config.registry.bitcoin_pool = _bitcoin_pool(bitcoind_url)
     config.add_request_method(_bitcoin_model, name='bitcoin', reify=True)
 
@@ -91,9 +91,15 @@ def _login_tween(handler, registry):
     return _login_handler
 
 
+def expandvars_dict(settings):
+    """ Expands all environment variables in a settings dictionary. """
+    return dict((key, os.path.expandvars(value)) for
+                key, value in settings.iteritems())
+
+
 def make_config(settings):
     from pyramid.config import Configurator
-    return Configurator(settings=settings)
+    return Configurator(settings=expandvars_dict(settings))
 
 
 def setup_config(config):
