@@ -1,7 +1,6 @@
 import time
 
 from nose.tools import assert_equal, assert_true
-from mock import Mock
 
 from coinhooks import api
 from coinhooks.test import TestWeb
@@ -36,10 +35,6 @@ class FakeBitcoinRPC(object):
         r.update(params)
         self._transactions[r['txid']] = r
         return r
-
-
-class FakeRedis(Mock):
-    pass
 
 
 class TestBitcoin(TestWeb):

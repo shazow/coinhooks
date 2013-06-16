@@ -4,19 +4,17 @@ import requests
 
 
 ## Helpers
-
-def _get_retry_wait(num_attempt=1, MAX_RETRY_WAIT=86400):
-    return min(MAX_RETRY_WAIT, 2**num_attempt)
-
 def _key_namespace(prefix):
     return lambda s: '%s:%s' % (prefix, s)
 
 
 # TODO: Port this to something like https://gist.github.com/shazow/5754021
 KEY_PREFIX_PENDING_WALLET = _key_namespace('w')
-KEY_CONFIRMATION_QUEUE = 'confirmation_queue'
-KEY_CALLBACK_QUEUE = 'callback_queue'
-KEY_WALLETS_SET = 'free_wallets'
+KEY_CONFIRMATION_QUEUE = 'confirmation:queue'
+KEY_CALLBACK_QUEUE = 'callback:queue'
+KEY_WALLETS_SET = 'wallet_pool'
+
+# TODO: Make queue-based transactions recoverable by using a dirty-queue with RPOPLPUSH.
 
 
 ## API
@@ -79,7 +77,8 @@ def queue_transaction(redis, tx_id):
     :param tx_id:
         Relevant transaction ID that we just learned about.
     """
-    value = json.dumps([tx_id, str(int(time.time()))])
+    now = str(int(time.time()))
+    value = json.dumps([tx_id, now])
     redis.rpush(KEY_CONFIRMATION_QUEUE, value)
 
     return value
