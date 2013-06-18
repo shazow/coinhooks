@@ -1,11 +1,17 @@
 import json
 import time
 import requests
+import logging
+
+log = logging.getLogger(__name__)
 
 
 ## Helpers
 def _key_namespace(prefix):
     return lambda s: '%s:%s' % (prefix, s)
+
+def _get_retry_wait(num_attempt=1, MAX_RETRY_WAIT=86400):
+    return min(MAX_RETRY_WAIT, 2**num_attempt)
 
 
 # TODO: Port this to something like https://gist.github.com/shazow/5754021
@@ -100,6 +106,8 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         # Don't care about sent transactions.
         return
 
+    log.debug("Relevant transaction received: %s", t['txid'])
+
     if int(t['confirmations']) < min_confirmations:
         # Not ready yet
         redis.rpush(KEY_CONFIRMATION_QUEUE, value)
@@ -171,11 +179,12 @@ def process_callback(redis, callback_url, payload, num_attempts=0):
     """
     Send webhook callback. If failed, then queue for retry later.
     """
+    log.debug("Sending callback: POST %s", callback_url)
     try:
         r = requests.post(callback_url, params=payload)
         r.raise_for_status()
         return r # Success
-    except requests.RequestException, e:
+    except requests.RequestException:
         # TODO: Log error
         pass
 
