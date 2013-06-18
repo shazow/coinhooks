@@ -84,7 +84,7 @@ def queue_transaction(redis, tx_id):
     return value
 
 
-def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmations=5):
+def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmations=5, force_callback=False):
     value = redis.rpop(KEY_CONFIRMATION_QUEUE)
     if not value:
         # Nothing to do.
@@ -103,14 +103,16 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
     if int(t['confirmations']) < min_confirmations:
         # Not ready yet
         redis.rpush(KEY_CONFIRMATION_QUEUE, value)
-        return
+        if not force_callback:
+            return
 
-    return process_transaction(bitcoin_rpc, redis, t)
+    return process_transaction(bitcoin_rpc, redis, t, min_confirmations)
 
 
 def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
     address = transaction['address']
     amount = transaction['amount']
+    is_confirmed =  int(transaction['confirmations']) >= min_confirmations
 
     key = KEY_PREFIX_PENDING_WALLET(address)
     value = redis.get(key)
@@ -120,7 +122,7 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
 
     payout_address, callback_url = json.loads(value)
 
-    if payout_address:
+    if is_confirmed and payout_address:
         # TODO: Log receipt.
         # TODO: Take fee.
         bitcoin_rpc.sendtoaddress(payout_address, amount)
@@ -129,7 +131,7 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
         transaction_str = json.dumps(transaction)
         payload = {
             # TODO: Add nonce and signing?
-            'state': 'confirmed',
+            'state': 'confirmed' if is_confirmed else 'unconfirmed',
             'transaction': transaction_str,
         }
 
