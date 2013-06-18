@@ -7,6 +7,11 @@ from coinhooks.test import TestWeb
 from coinhooks.test.fixtures import BITCOIN_ADDRESSES
 
 
+class Bag(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+
+
 class FakeBitcoinRPC(object):
     # TODO: Move this into its own lib?
 
@@ -23,17 +28,16 @@ class FakeBitcoinRPC(object):
         return
 
     def _inject_transaction(self, **params):
-        r = {
+        r = Bag({
             u'account': u'',
             u'address': unicode(BITCOIN_ADDRESSES.good[0]),
             u'amount': 0.5,
-            u'category': u'receive',
             u'confirmations': 0,
             u'time': int(time.time()),
             u'txid': u'000defaulttransaction',
-        }
+        })
         r.update(params)
-        self._transactions[r['txid']] = r
+        self._transactions[r.txid] = r
         return r
 
 
@@ -65,5 +69,5 @@ class TestBitcoin(TestWeb):
         t = api.bitcoin.deque_transaction(fake_bitcoin, self.redis)
 
         assert_true(t)
-        assert_equal(t['txid'], txid)
-        assert_equal(t['address'], w)
+        assert_equal(t.txid, txid)
+        assert_equal(t.address, w)

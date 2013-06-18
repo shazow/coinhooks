@@ -1,8 +1,8 @@
-import json
 
 from unstdlib import iterate
 from functools import wraps
 
+from coinhooks.lib import json_ as json
 from coinhooks.web.environment import httpexceptions, Response
 from coinhooks.lib.exceptions import APIControllerError, LoginRequired
 
@@ -127,7 +127,7 @@ def index(request):
     if format not in ('json', 'redirect'):
         return httpexceptions.HTTPBadRequest('Invalid format requested: %s' % format)
 
-    encode_settings = {} # FIXME: {'cls': SchemaEncoder}
+    encode_settings = {}
     if request.params.get('pretty'):
         encode_settings['sort_keys'] = True
         encode_settings['indent'] = 4

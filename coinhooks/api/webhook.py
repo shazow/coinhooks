@@ -1,8 +1,8 @@
 # FIXME: This is in-progress, not used yet.
-import json
 import requests
 
 from coinhooks.lib.exceptions import APIError
+from coinhooks.lib import json_ as json
 
 
 KEY_CALLBACK_QUEUE = 'callback:queue'

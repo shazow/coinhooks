@@ -1,7 +1,8 @@
-import json
 import time
 import requests
 import logging
+
+from coinhooks.lib import json_ as json
 
 log = logging.getLogger(__name__)
 
@@ -102,13 +103,9 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         return
 
     t = bitcoin_rpc.gettransaction(tx_id)
-    if t['category'] != u'receive':
-        # Don't care about sent transactions.
-        return
+    log.debug("Relevant transaction received: %s", t.txid)
 
-    log.debug("Relevant transaction received: %s", t['txid'])
-
-    if int(t['confirmations']) < min_confirmations:
+    if int(t.confirmations) < min_confirmations:
         # Not ready yet
         redis.rpush(KEY_CONFIRMATION_QUEUE, value)
         if not force_callback:
@@ -118,9 +115,9 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
 
 
 def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
-    address = transaction['address']
-    amount = transaction['amount']
-    is_confirmed =  int(transaction['confirmations']) >= min_confirmations
+    address = transaction.address
+    amount = transaction.amount
+    is_confirmed =  int(transaction.confirmations) >= min_confirmations
 
     key = KEY_PREFIX_PENDING_WALLET(address)
     value = redis.get(key)
@@ -136,7 +133,7 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
         bitcoin_rpc.sendtoaddress(payout_address, amount)
 
     if callback_url:
-        transaction_str = json.dumps(transaction)
+        transaction_str = json.dumps(transaction.__dict__)
         payload = {
             # TODO: Add nonce and signing?
             'state': 'confirmed' if is_confirmed else 'unconfirmed',
