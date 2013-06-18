@@ -35,6 +35,16 @@ def wallet_deposit(request):
 
     w = api.bitcoin.create_wallet(request.bitcoin, request.redis, callback_url=callback_url)
 
+    payload = {
+        'state': 'created',
+        'wallet_address': w,
+    }
+    r = api.bitcoin.process_callback(request.redis, callback_url, payload)
+
+    if not r:
+        api.bitcoin.discard_wallet(request.redis, w)
+        raise APIControllerError('Failed webhook request: POST %s' % callback_url)
+
     return {
         'wallet_address': w,
     }
