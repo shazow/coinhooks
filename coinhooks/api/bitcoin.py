@@ -202,7 +202,7 @@ def process_callback(redis, callback_url, payload, num_attempts=0):
     """
     log.debug("Sending callback: POST %s", callback_url)
     try:
-        r = requests.post(callback_url, params=payload)
+        r = requests.post(callback_url, data=payload)
         r.raise_for_status()
         return r # Success
     except requests.RequestException:

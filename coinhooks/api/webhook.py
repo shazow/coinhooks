@@ -14,7 +14,7 @@ def _get_retry_wait(num_attempt=1, MAX_RETRY_WAIT=86400):
 
 def send(callback_url, payload):
     try:
-        r = requests.post(callback_url, params=payload)
+        r = requests.post(callback_url, data=payload)
     except requests.RequestException:
         raise APIError('Failed webhook request: POST %s' % callback_url)
 
