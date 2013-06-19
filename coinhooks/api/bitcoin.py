@@ -106,10 +106,10 @@ def queue_transaction(bitcoin_rpc, redis, tx_id):
     transaction = t.__dict__
     log.debug("Relevant transaction received: %s", transaction['txid'])
 
+    # FIXME: We don't need to store the full transaction, just the txid. (Regression)
     value = json.dumps(transaction)
     redis.rpush(KEY_CONFIRMATION_QUEUE, value)
 
-    log.debug("Processing transaction: %s", transaction['txid'])
     return process_transaction(bitcoin_rpc, redis, transaction)
 
 
@@ -120,9 +120,12 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         return
 
     transaction = json.loads(value)
+    # Refresh
     if isinstance(transaction, list):
         # FIXME: Backwards compat with old format, remove this soon.
         transaction = bitcoin_rpc.gettransaction(transaction[0]).__dict__
+    else:
+        transaction = bitcoin_rpc.gettransaction(transaction['txid']).__dict__
 
     if int(transaction['timereceived']) + seconds_expire < time.time():
         # TODO: Log expired transaction.
@@ -133,11 +136,12 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         redis.lpush(KEY_CONFIRMATION_QUEUE, value)
         return
 
-    log.debug("Processing transaction: %s", transaction['txid'])
     return process_transaction(bitcoin_rpc, redis, transaction, min_confirmations)
 
 
 def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
+    log.debug("Processing transaction: %s", transaction['txid'])
+
     receive_details = next(d for d in transaction['details'] if d['category'] == u'receive')
     address = receive_details['address']
     amount = receive_details['amount']
@@ -152,6 +156,7 @@ def process_transaction(bitcoin_rpc, redis, transaction, min_confirmations=5):
     payout_address, callback_url = json.loads(value)
 
     if is_confirmed and payout_address:
+        # FIXME: Is bitcoind ready to sendtoaddress at this point?
         # TODO: Log receipt.
         # TODO: Take fee.
         bitcoin_rpc.sendtoaddress(payout_address, amount)
