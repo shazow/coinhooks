@@ -120,6 +120,10 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
         return
 
     transaction = json.loads(value)
+    if isinstance(transaction, list):
+        # FIXME: Backwards compat with old format, remove this soon.
+        transaction = bitcoin_rpc.gettransaction(transaction[0]).__dict__
+
     if int(transaction['timereceived']) + seconds_expire < time.time():
         # TODO: Log expired transaction.
         return
