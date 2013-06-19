@@ -73,7 +73,7 @@ def discard_wallet(redis, address):
     redis.sadd(KEY_WALLETS_SET, address)
 
 
-def queue_transaction(redis, tx_id):
+def queue_transaction(bitcoin_rpc, redis, tx_id):
     """
     Transaction notification received for an address that belongs to us. Used
     by Bitcoind's `walletnotify=` hook through `bin/walletnotify.py`.
@@ -84,23 +84,6 @@ def queue_transaction(redis, tx_id):
     :param tx_id:
         Relevant transaction ID that we just learned about.
     """
-    now = str(int(time.time()))
-    value = json.dumps([tx_id, now])
-    redis.rpush(KEY_CONFIRMATION_QUEUE, value)
-
-    return value
-
-
-def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmations=5, force_callback=False):
-    value = redis.rpop(KEY_CONFIRMATION_QUEUE)
-    if not value:
-        # Nothing to do.
-        return
-
-    tx_id, timestamp = json.loads(value)
-    if int(timestamp) + seconds_expire < time.time():
-        # TODO: Log expired transaction.
-        return
 
     t = bitcoin_rpc.gettransaction(tx_id)
     if not t:
@@ -110,12 +93,30 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
     transaction = t.__dict__
     log.debug("Relevant transaction received: %s", transaction['txid'])
 
+    value = json.dumps(transaction)
+    redis.rpush(KEY_CONFIRMATION_QUEUE, value)
+
+    log.debug("Processing transaction: %s", transaction['txid'])
+    return process_transaction(bitcoin_rpc, redis, transaction)
+
+
+def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmations=5):
+    value = redis.rpop(KEY_CONFIRMATION_QUEUE)
+    if not value:
+        # Nothing to do.
+        return
+
+    transaction = json.loads(value)
+    if int(transaction['timereceived']) + seconds_expire < time.time():
+        # TODO: Log expired transaction.
+        return
+
     if int(transaction['confirmations']) < min_confirmations:
         # Not ready yet
         redis.rpush(KEY_CONFIRMATION_QUEUE, value)
-        if not force_callback:
-            return
+        return
 
+    log.debug("Processing transaction: %s", transaction['txid'])
     return process_transaction(bitcoin_rpc, redis, transaction, min_confirmations)
 
 
