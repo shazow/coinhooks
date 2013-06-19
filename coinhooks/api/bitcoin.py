@@ -73,6 +73,19 @@ def discard_wallet(redis, address):
     redis.sadd(KEY_WALLETS_SET, address)
 
 
+def refresh_transactions(bitcoin_rpc, redis, max_num=None):
+    """
+    Cycle through all stored transactions in the confirmation queue and check
+    their status.
+    """
+    num = redis.llen(KEY_CONFIRMATION_QUEUE)
+    if max_num:
+        num = min(max_num, num)
+
+    for i in xrange(num):
+        deque_transaction(bitcoin_rpc, redis)
+
+
 def queue_transaction(bitcoin_rpc, redis, tx_id):
     """
     Transaction notification received for an address that belongs to us. Used
@@ -113,7 +126,7 @@ def deque_transaction(bitcoin_rpc, redis, seconds_expire=60*60*24, min_confirmat
 
     if int(transaction['confirmations']) < min_confirmations:
         # Not ready yet
-        redis.rpush(KEY_CONFIRMATION_QUEUE, value)
+        redis.lpush(KEY_CONFIRMATION_QUEUE, value)
         return
 
     log.debug("Processing transaction: %s", transaction['txid'])

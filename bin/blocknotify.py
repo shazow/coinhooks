@@ -6,7 +6,7 @@ from coinhooks import api
 
 
 def main(request):
-    api.bitcoin.deque_transaction(request.bitcoin, request.redis)
+    api.bitcoin.refresh_transactions(request.bitcoin, request.redis)
 
 
 if __name__ == '__main__':
