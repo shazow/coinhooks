@@ -2,7 +2,7 @@
 
 A webhooks service for Bitcoin ecommerce.
 
-Currently under development. Ping me if you're interested in being an early easier.
+Status: Partially functional, but abandoned.
 
 
 ## Code
@@ -27,4 +27,4 @@ The frontend is built on Pyramid. It depends on Redis for persistence and a Bitc
 
 ## License:
 
-Currently unlicensed. Planning to release under a BSD-like license.
+MIT
